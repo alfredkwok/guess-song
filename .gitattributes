@@ -1,0 +1,8 @@
+# Normalise text files to LF inside the repo.
+* text=auto
+
+# Shell scripts and nginx configs MUST stay LF, otherwise Linux fails with
+# "bad interpreter: /bin/bash^M" when running `bash deploy/setup.sh`.
+# (Windows has core.autocrlf=true, which would otherwise add CRLF.)
+*.sh   text eol=lf
+*.conf text eol=lf

@@ -1,0 +1,26 @@
+# systemd unit for Guess The Song.
+# deploy/setup.sh generates this file automatically (with the right paths/user);
+# this copy is for manual setup: put it in /etc/systemd/system/songguess.service
+#
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now songguess
+
+[Unit]
+Description=Guess The Song (Node + Socket.io)
+After=network.target
+
+[Service]
+Type=simple
+# Change to the user that owns the app directory (usually "ubuntu" on EC2).
+User=ubuntu
+WorkingDirectory=/home/ubuntu/guess-the-song/server
+Environment=NODE_ENV=production
+Environment=PORT=3001
+ExecStart=/usr/bin/node index.js
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+
+# Deployment bundle produced by DEPLOY.md
+songguess.tar.gz
+
+# NOTE: server/.preview-cache.json is intentionally NOT ignored.
+# It is small (~80 KB) and ships the warmed iTunes preview URLs, so a fresh
+# deploy is instantly playable instead of re-resolving ~500 songs.
