@@ -349,6 +349,73 @@ git clone https://<你的帳號>:<TOKEN>@github.com/<你的帳號>/guess-the-son
 
 ---
 
+## 💰 費用：一直開著會收錢嗎？
+
+**會。t3.micro 在香港區域（ap-east-1）價錢如下：**
+
+| 項目 | 費用 |
+| --- | --- |
+| EC2 t3.micro（Linux，On-Demand） | **US$0.0146/小時 ≈ US$10.66/月** |
+| EBS 磁碟 8 GB gp3 | ≈ US$0.80/月 |
+| **合計（24 小時開著）** | **≈ US$11–12/月（約 HK$85–95）** |
+| 資料傳輸 | **幾乎為零**（音樂由 Apple CDN 直接串流到玩家手機，不經你的 EC2；AWS 每月 100 GB 免費） |
+
+> ⚠️ **香港（ap-east-1）一般不在 AWS 免費方案內**，就算帳號未滿 12 個月也可能照收。
+> 用 **Cost Explorer** 查最準（見下）。
+
+### 省錢方法（由最有效開始）
+
+**① 不玩就 Stop（最有效）**
+
+AWS Console → EC2 → 選主機 → **Instance state → Stop instance**
+
+- 停止期間**只收 EBS 磁碟約 US$1/月**，等於省掉 9 成
+- 再按 **Start** 開回來時，**systemd 會自動把遊戲啟動**，不用重新安裝
+- ⚠️ **但 Public IP 會改變**（你沒有 Elastic IP），要回去看新的 IP
+
+**② 長期開著 → 買 Savings Plan**
+1 年期 No Upfront Compute Savings Plan ≈ **US$7.74/月（省 27%）**
+
+**③ 換區域**
+香港是偏貴的區域。東京／新加坡便宜一些，但香港玩家連線延遲會高一點（玩猜歌其實影響很小）。
+
+### 怎麼查實際費用
+
+AWS Console → 右上角**帳號名稱** → **Billing and Cost Management** → **Bills**（當月明細）或 **Cost Explorer**（趨勢圖）。
+
+> 建議第一個月去看一次，確認有沒有意外收費（例如忘了刪掉的 Elastic IP）。
+
+---
+
+## 🔁 日常操作速查表
+
+| 我想… | 怎麼做 |
+| --- | --- |
+| **改歌單** | 編輯 `server/songdata.js` → 推上 GitHub → EC2 跑 `update.sh` |
+| **改程式/畫面** | 同上（`update.sh` 會重新 build 前端） |
+| **看伺服器有沒有活著** | SSH 進去：`sudo systemctl status songguess` |
+| **看即時日誌** | `sudo journalctl -u songguess -f` |
+| **重啟遊戲** | `sudo systemctl restart songguess` |
+| **暫時關掉省錢** | AWS Console → 選主機 → **Instance state → Stop** |
+| **查這個月花多少** | AWS Console → **Billing and Cost Management → Bills** |
+
+**更新程式的完整流程：**
+
+```powershell
+# Windows
+cd D:\alfreprogramm\javascript\DEEPSEEK
+git add -A
+git commit -m "改了什麼"
+git push
+```
+
+```bash
+# EC2（SSH 進去後）
+cd ~/guess-song && bash deploy/update.sh
+```
+
+---
+
 ## 注意事項
 
 - **房間存在記憶體**：重啟服務會清空所有房間（遊戲進行中請避免重啟）。
