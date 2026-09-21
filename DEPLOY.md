@@ -22,6 +22,26 @@
 
 ---
 
+## ⚠️ 先搞清楚：每一步要在「哪裡」打？
+
+**這是初學者最常卡住的地方。** 整份文件只會用到兩個地方：
+
+| 步驟 | 在哪裡打 | 提示字元長相 |
+| --- | --- | --- |
+| ① 推送程式 | **Windows PowerShell** | `PS C:\Users\alfre>` |
+| ② 開 EC2 | **AWS 網站**（點按鈕，不用打字） | — |
+| ③ 連進 EC2 | **Windows PowerShell**（新開一個視窗） | `PS C:\Users\alfre>` |
+| ④ 安裝 | **SSH 連上後的視窗** | `ubuntu@ip-172-31-xx-xx:~$` |
+
+**判斷方法就是看提示字元**：
+
+- 看到 `PS C:\...>` → 你在**自己的 Windows**
+- 看到 `ubuntu@ip-172-31-xx-xx:~$` → 你已經**進到 EC2 了**，這裡都是 Linux 指令
+
+> 在 AWS 網站主機頁面右上角的 **Connect → SSH client** 也會教你怎麼連，但照下面做最快。
+
+---
+
 ## 生產環境長怎樣
 
 ```
@@ -108,17 +128,37 @@ git push -u origin main
 
 ---
 
-## 步驟 3：從 Windows 連進去
+## 步驟 3：從 Windows 連進去（在你的電腦打）
+
+**按 `Win` 鍵 → 打 `powershell` → 按 `Enter`**，開一個**新的 PowerShell 視窗**，然後輸入：
 
 ```powershell
-ssh -i C:\Users\alfre\Downloads\songguess-key.pem ubuntu@<你的-EC2-IP>
+ssh -i "C:\Users\alfre\Downloads\EC2 tutorial.pem" ubuntu@<你的-EC2-IP>
 ```
 
-第一次問 `Are you sure you want to continue connecting?` → 打 `yes`。
+> ⚠️ **你的金鑰檔名有空格（`EC2 tutorial.pem`），路徑一定要用雙引號包起來**，否則會找不到檔案。
 
-> **若出現 `UNPROTECTED PRIVATE KEY FILE`**，先修權限再連：
+**EC2 的 IP 去哪裡找**：AWS Console → **EC2 → Instances** → 點你的主機 → 複製 **Public IPv4 address**（長得像 `13.114.xx.xx`）。
+
+第一次連線會問：
+
+```
+Are you sure you want to continue connecting (yes/no/[fingerprint])?
+```
+
+打 `yes` 再按 `Enter`。
+
+連上後提示字元會變成：
+
+```
+ubuntu@ip-172-31-xx-xx:~$
+```
+
+**看到這個就代表你已經在 EC2 裡面了** → 接著做步驟 4（這裡開始都是 Linux 指令）。
+
+> **若出現 `UNPROTECTED PRIVATE KEY FILE` 警告**，先修權限再連：
 > ```powershell
-> icacls C:\Users\alfre\Downloads\songguess-key.pem /inheritance:r /grant:r "$($env:USERNAME):(R)"
+> icacls "C:\Users\alfre\Downloads\EC2 tutorial.pem" /inheritance:r /grant:r "$($env:USERNAME):(R)"
 > ```
 
 ---
@@ -128,8 +168,8 @@ ssh -i C:\Users\alfre\Downloads\songguess-key.pem ubuntu@<你的-EC2-IP>
 回到 **SSH 視窗**：
 
 ```bash
-git clone https://github.com/<你的帳號>/guess-the-song.git ~/guess-the-song
-cd ~/guess-the-song && bash deploy/setup.sh
+git clone https://github.com/alfredkwok/guess-song.git ~/guess-song
+cd ~/guess-song && bash deploy/setup.sh
 ```
 
 `deploy/setup.sh` 會自動做完：
@@ -167,19 +207,30 @@ Open:  http://13.114.xx.xx/
 
 ## 之後要更新程式（重點！）
 
-改完程式碼後：
+### ① 上傳到 GitHub（在 Windows PowerShell 打）
 
 ```powershell
-# Windows
 cd D:\alfreprogramm\javascript\DEEPSEEK
-git add -A
-git commit -m "改了什麼"
-git push
+git add -A                 # 把所有改動「選起來」
+git commit -m "改了什麼"    # 打包成一個版本（引號內自己描述）
+git push                   # 上傳到 GitHub
 ```
 
+用生活化的比喻：
+
+| 指令 | 比喻 |
+| --- | --- |
+| `git add -A` | 把要寄的東西**放進箱子** |
+| `git commit -m "..."` | **封箱並貼標籤** |
+| `git push` | **寄出去**（上傳到 GitHub） |
+
+> 💡 **`server/.preview-cache.json` 會一直顯示 modified，這是正常的**（它在記錄已抓到的試聽網址）。
+> `git add -A` 會一起帶上，不用特別理它。
+
+### ② 讓 EC2 也更新（在 SSH 視窗打）
+
 ```bash
-# EC2
-cd ~/guess-the-song
+cd ~/guess-song
 bash deploy/update.sh
 ```
 

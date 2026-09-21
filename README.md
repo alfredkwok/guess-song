@@ -1,5 +1,7 @@
 # 🎵 Guess The Song — 香港廣東歌版
 
+> English version: **[README.en.md](README.en.md)**
+
 從香港最紅的粵語歌猜歌的多人連線派對遊戲。
 
 - 房主選擇**年份歌單**或**歌手精選**（陳奕迅 / 周國賢 / 林家謙 / 三位混合）
@@ -85,9 +87,9 @@ npm start         # server:3001 同時提供 API + 靜態網頁
 
 ```bash
 # 在 EC2 上
-git clone https://github.com/<你的帳號>/guess-the-song.git ~/guess-the-song
-cd ~/guess-the-song && bash deploy/setup.sh   # 首次安裝
-bash deploy/update.sh                         # 之後每次更新
+git clone https://github.com/alfredkwok/guess-song.git ~/guess-song
+cd ~/guess-song && bash deploy/setup.sh   # 首次安裝
+bash deploy/update.sh                     # 之後每次更新
 ```
 
 `deploy/` 內附 `nginx.conf`（含 WebSocket 升級）、`songguess.service`、`setup.sh`、`update.sh`。
