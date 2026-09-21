@@ -133,10 +133,12 @@ git push -u origin main
 **按 `Win` 鍵 → 打 `powershell` → 按 `Enter`**，開一個**新的 PowerShell 視窗**，然後輸入：
 
 ```powershell
-ssh -i "C:\Users\alfre\Downloads\EC2 tutorial.pem" ubuntu@<你的-EC2-IP>
+ssh -i "C:\Users\alfre\Downloads\songguess.pem" ubuntu@<你的-EC2-IP>
 ```
 
-> ⚠️ **你的金鑰檔名有空格（`EC2 tutorial.pem`），路徑一定要用雙引號包起來**，否則會找不到檔案。
+> ⚠️ **金鑰一定要對應正確的 instance。** 你 Downloads 裡有兩個 `.pem`：
+> - `songguess.pem` ← **這台用這個**
+> - `EC2 tutorial.pem` ← 別台 instance 用的，用錯會出現 `Permission denied (publickey)`
 
 **EC2 的 IP 去哪裡找**：AWS Console → **EC2 → Instances** → 點你的主機 → 複製 **Public IPv4 address**（長得像 `13.114.xx.xx`）。
 
@@ -158,7 +160,7 @@ ubuntu@ip-172-31-xx-xx:~$
 
 > **若出現 `UNPROTECTED PRIVATE KEY FILE` 警告**，先修權限再連：
 > ```powershell
-> icacls "C:\Users\alfre\Downloads\EC2 tutorial.pem" /inheritance:r /grant:r "$($env:USERNAME):(R)"
+> icacls "C:\Users\alfre\Downloads\songguess.pem" /inheritance:r /grant:r "$($env:USERNAME):(R)"
 > ```
 
 ---
