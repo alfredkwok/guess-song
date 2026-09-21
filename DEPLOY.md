@@ -82,7 +82,7 @@ Node 一個埠就搞定全部，nginx 只負責轉發與 WebSocket 升級。
 
 到 **https://github.com/new**：
 
-- **Repository name**：`guess-the-song`
+- **Repository name**：`guess-song`
 - **Public**（建議，這樣 EC2 不用登入）
 - **不要**勾 Add README / .gitignore / license（我們本地已經有了）
 - 按 **Create repository**
@@ -93,7 +93,7 @@ Node 一個埠就搞定全部，nginx 只負責轉發與 WebSocket 升級。
 
 ```powershell
 cd D:\alfreprogramm\javascript\DEEPSEEK
-git remote add origin https://github.com/<你的帳號>/guess-the-song.git
+git remote add origin https://github.com/alfredkwok/guess-song.git
 git push -u origin main
 ```
 
@@ -102,7 +102,7 @@ git push -u origin main
 - **最簡單**：會自動跳出瀏覽器 → 登入 GitHub → 授權（Git Credential Manager）
 - 若沒跳出來：到 GitHub → Settings → Developer settings → **Personal access tokens** → 建一組（勾 `repo`），推送時帳號打你的 GitHub 用戶名、密碼貼上 token
 
-> 確認推送成功：打開 `https://github.com/<你的帳號>/guess-the-song` 應該看得到檔案。
+> 確認推送成功：打開 `https://github.com/alfredkwok/guess-song` 應該看得到檔案。
 
 ---
 
@@ -310,9 +310,9 @@ scp -i C:\Users\alfre\Downloads\songguess-key.pem songguess.tar.gz ubuntu@<EC2-I
 
 ```bash
 # EC2
-mkdir -p ~/guess-the-song
-tar -xzf ~/songguess.tar.gz -C ~/guess-the-song
-cd ~/guess-the-song && bash deploy/setup.sh
+mkdir -p ~/guess-song
+tar -xzf ~/songguess.tar.gz -C ~/guess-song
+cd ~/guess-song && bash deploy/setup.sh
 ```
 
 之後更新要重複「打包 → scp → 解壓 → build → 重啟」，這就是 GitHub 流程想省掉的部分。
