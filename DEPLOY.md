@@ -167,10 +167,27 @@ ubuntu@ip-172-31-xx-xx:~$
 
 **看到這個就代表你已經在 EC2 裡面了** → 接著做步驟 4（這裡開始都是 Linux 指令）。
 
-> **若出現 `UNPROTECTED PRIVATE KEY FILE` 警告**，先修權限再連：
+> **若出現 `UNPROTECTED PRIVATE KEY FILE` 警告**（Windows 最常見的問題：`Permissions ... are too open`）
+>
 > ```powershell
+> # 把權限收成「只有你自己可以讀」
 > icacls "C:\Users\alfre\Downloads\songguess.pem" /inheritance:r /grant:r "$($env:USERNAME):(R)"
+>
+> # 檢查：應該只剩你自己那一行
+> icacls "C:\Users\alfre\Downloads\songguess.pem"
 > ```
+>
+> 如果清單裡還有其他使用者／群組（例如 `CodexSandboxUsers`、`Users`、`Everyone`、`Authenticated Users`），把它們移除：
+>
+> ```powershell
+> icacls "C:\Users\alfre\Downloads\songguess.pem" /remove:g "CodexSandboxUsers" "Users" "Everyone" "Authenticated Users"
+> ```
+>
+> 修好後直接重跑一次 `ssh` 指令即可。
+>
+> **不想處理權限？** 用瀏覽器版終端機完全不用金鑰：
+> AWS Console → EC2 → 選你的主機 → **Connect → EC2 Instance Connect → Connect**
+> （前提是 Security Group 的 port 22 要允許 AWS 的服務網段，或暫時開 `0.0.0.0/0`）
 
 ---
 
