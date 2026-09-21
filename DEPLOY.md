@@ -133,14 +133,23 @@ git push -u origin main
 **按 `Win` 鍵 → 打 `powershell` → 按 `Enter`**，開一個**新的 PowerShell 視窗**，然後輸入：
 
 ```powershell
-ssh -i "C:\Users\alfre\Downloads\songguess.pem" ubuntu@<你的-EC2-IP>
+# 把 1.2.3.4 換成你的 Public IPv4 address
+ssh -i "C:\Users\alfre\Downloads\songguess.pem" ubuntu@1.2.3.4
 ```
+
+> 🛑 **最常見的錯誤：不要把角括號 `<` `>` 打進去！**
+> 文件裡的 `<...>` 只是「這裡要換成你的值」的**記號**。
+> 在 PowerShell 裡 `<` 是保留符號，打了會出現
+> `Could not resolve hostname <1.2.3.4>` 或一串亂碼錯誤。
+>
+> ❌ `ubuntu@<43.199.63.71>`
+> ✅ `ubuntu@43.199.63.71`
 
 > ⚠️ **金鑰一定要對應正確的 instance。** 你 Downloads 裡有兩個 `.pem`：
 > - `songguess.pem` ← **這台用這個**
 > - `EC2 tutorial.pem` ← 別台 instance 用的，用錯會出現 `Permission denied (publickey)`
 
-**EC2 的 IP 去哪裡找**：AWS Console → **EC2 → Instances** → 點你的主機 → 複製 **Public IPv4 address**（長得像 `13.114.xx.xx`）。
+**EC2 的 IP 去哪裡找**：AWS Console → **EC2 → Instances** → 點你的主機 → 複製 **Public IPv4 address**（像 `43.199.63.71`）。
 
 第一次連線會問：
 
@@ -268,7 +277,10 @@ Certbot 會自動改好 nginx 並設定自動續期。完成後開 **`https://so
 
 | 症狀 | 檢查 |
 | --- | --- |
-| 網站連不上 | Security group 有沒有開 **port 80**？ |
+| `Could not resolve hostname <...>` | 你把角括號 `<` `>` 一起打進去了。IP 只用數字和點：`ubuntu@43.199.63.71` |
+| `Permission denied (publickey)` | 用錯 `.pem` 了，確認是 `songguess.pem` |
+| `UNPROTECTED PRIVATE KEY FILE` | 跑上面的 `icacls` 修權限 |
+| 網站連不上（一直轉圈） | Security group 有沒有開 **port 80**？ |
 | 打開是 502 | `sudo journalctl -u songguess -n 50` |
 | 房間代碼無法加入 | nginx 的 `Upgrade`/`Connection` 標頭（`deploy/nginx.conf` 已含） |
 | 歌都抓不到 | `curl -s localhost/api/health`；iTunes 限流會自動重試，稍等即可 |
