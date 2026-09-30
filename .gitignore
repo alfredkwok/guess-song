@@ -8,5 +8,6 @@ dist/
 songguess.tar.gz
 
 # NOTE: server/.preview-cache.json is intentionally NOT ignored.
-# It is small (~80 KB) and ships the warmed iTunes preview URLs, so a fresh
-# deploy is instantly playable instead of re-resolving ~500 songs.
+# It ships the warmed iTunes preview URLs, so a fresh deploy is instantly
+# playable instead of re-resolving ~700 songs through the rate-limited API.
+# Regenerate it with: node server/scripts/warm-cache.mjs

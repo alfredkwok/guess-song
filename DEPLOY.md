@@ -219,6 +219,10 @@ Open:  http://13.114.xx.xx/
 
 > 📦 因為 repo 裡已經包含 `server/.preview-cache.json`（抓好的試聽快取），
 > 上線後**分類立刻能玩**，不用等 iTunes 慢慢抓。
+>
+> 🔧 如果你在本機改了歌單（`server/songdata.js`），推上 GitHub 前先跑
+> `node server/scripts/warm-cache.mjs` 把新歌的試聽抓好，並把
+> `server/.preview-cache.json` 一起 commit，否則 EC2 第一次玩要自己慢慢抓。
 
 ---
 
@@ -391,7 +395,7 @@ AWS Console → 右上角**帳號名稱** → **Billing and Cost Management** �
 
 | 我想… | 怎麼做 |
 | --- | --- |
-| **改歌單** | 編輯 `server/songdata.js` → 推上 GitHub → EC2 跑 `update.sh` |
+| **改歌單** | 編輯 `server/songdata.js` → 本機跑 `node server/scripts/warm-cache.mjs` 補試聽 → 推上 GitHub → EC2 跑 `update.sh` |
 | **改程式/畫面** | 同上（`update.sh` 會重新 build 前端） |
 | **看伺服器有沒有活著** | SSH 進去：`sudo systemctl status songguess` |
 | **看即時日誌** | `sudo journalctl -u songguess -f` |

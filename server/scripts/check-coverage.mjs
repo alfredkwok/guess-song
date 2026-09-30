@@ -1,6 +1,7 @@
 // Coverage check: resolve every song in every category and report misses.
-import { CATEGORIES } from './songdata.js'
-import { resolveTracks } from './preview.js'
+// Usage (from the repo root): node server/scripts/check-coverage.mjs
+import { CATEGORIES } from '../songdata.js'
+import { resolveTracks } from '../preview.js'
 
 for (const cat of CATEGORIES) {
   const resolved = await resolveTracks(cat.songs, 8)

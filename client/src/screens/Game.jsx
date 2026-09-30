@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { playSpotifyPreview, playDemoTone, stopAudio } from '../lib/audio.js'
 import { socket } from '../socket.js'
+import VolumeControl from '../components/VolumeControl.jsx'
 
 export default function Game({ game, players, isHost, myName, onGuess, onPlayAgain, onLeave }) {
   const [locked, setLocked] = useState(null)
@@ -101,6 +102,8 @@ export default function Game({ game, players, isHost, myName, onGuess, onPlayAga
           </div>
         ))}
       </div>
+
+      <VolumeControl compact />
 
       {result ? (
         <div className="result-banner">

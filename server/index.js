@@ -4,13 +4,18 @@ import { createServer } from 'node:http'
 import { Server } from 'socket.io'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { CATEGORIES } from './songdata.js'
+import { CATEGORIES, ARTIST_GROUPS, songInGroup } from './songdata.js'
 import { resolveTracks, getCachedTracks, getUncached, isRateLimited } from './preview.js'
 
 const PORT = process.env.PORT || 3001
 const SONG_SECONDS = 5
 const GUESS_WINDOW_MS = 15000
+// Pause after the answer is revealed. A correct guess advances quickly so the
+// momentum keeps up; a total miss gets a little longer to read the answer.
 const RESULT_PAUSE_MS = 4000
+const RESULT_PAUSE_CORRECT_MS = 2000
+// How many recently-shown wrong options to keep out of the next question.
+const DISTRACTOR_RECENT = 8
 const MAX_PLAYERS = 20
 
 const app = express()
@@ -20,18 +25,48 @@ const io = new Server(httpServer, { cors: { origin: true } })
 app.use(express.json())
 
 // ---------------------------------------------------------------- REST API
+// -------------------------------------------------------- artist-group filters
+// Players may exclude a whole artist group (e.g. MIRROR + all 12 members)
+// before creating a room. The songs stay in the playlist data - filtering only
+// changes which ones are sent to the client.
+function groupsFromQuery(value) {
+  if (!value) return []
+  const wanted = String(value).split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+  return ARTIST_GROUPS.filter((g) => wanted.includes(g.id.toLowerCase()))
+}
+
+// Drop every song that belongs to any of the excluded groups.
+function filterSongs(songs, excluded) {
+  if (!excluded.length) return songs
+  return songs.filter((s) => !excluded.some((g) => songInGroup(s, g)))
+}
+
 app.get('/api/health', (_req, res) => res.json({ ok: true }))
 
 app.get('/api/categories', (_req, res) => {
-  res.json(CATEGORIES.map((c) => ({
-    id: c.id,
-    label: c.label,
-    group: c.group || '年份歌單',
-    range: c.range,
-    description: c.description,
-    count: c.songs.length,
-    ready: getCachedTracks(c.songs).length
-  })))
+  res.json(CATEGORIES.map((c) => {
+    const ready = getCachedTracks(c.songs).length
+    // How many songs remain playable once each group is excluded.
+    const groupCounts = {}
+    for (const g of ARTIST_GROUPS) {
+      const kept = c.songs.filter((s) => !songInGroup(s, g))
+      groupCounts[g.id] = {
+        ready: getCachedTracks(kept).length,
+        count: kept.length,
+        removed: c.songs.length - kept.length
+      }
+    }
+    return {
+      id: c.id,
+      label: c.label,
+      group: c.group || '年份歌單',
+      range: c.range,
+      description: c.description,
+      count: c.songs.length,
+      ready,
+      groupCounts
+    }
+  }))
 })
 
 // Resolve a category's previews, retrying while iTunes rate-limits us.
@@ -54,20 +89,28 @@ app.get('/api/category/:id', async (req, res) => {
   const cat = CATEGORIES.find((c) => c.id === req.params.id)
   if (!cat) return res.status(404).json({ success: false, error: '找不到這個分類。' })
 
+  // `exclude=mirror` (comma-separated ids) filters out whole artist groups.
+  const excluded = groupsFromQuery(req.query.exclude)
+  const songs = filterSongs(cat.songs, excluded)
+
   // Kick off background resolution for anything not yet cached (self-healing).
+  // Always resolve the FULL list, so both the filtered and unfiltered variants
+  // are ready without a second round of iTunes lookups.
   const uncached = getUncached(cat.songs)
   const bg = uncached.length ? runCategoryJob(cat) : null
 
-  let cached = getCachedTracks(cat.songs)
+  let cached = getCachedTracks(songs)
+  const cachedFull = getCachedTracks(cat.songs)
 
   // Cold start: wait briefly (up to ~15s) to build a playable set.
   if (cached.length < 4 && bg) {
     await Promise.race([bg, new Promise((r) => setTimeout(r, 15000))])
-    cached = getCachedTracks(cat.songs)
+    cached = getCachedTracks(songs)
   }
 
+  const idSuffix = excluded.length ? `-${excluded.map((g) => g.id).join('_')}` : ''
   const tracks = cached.map((s, i) => ({
-    id: `${cat.id}-${i}`,
+    id: `${cat.id}${idSuffix}-${i}`,
     title: s.title,
     artist: s.artist,
     year: s.year,
@@ -82,7 +125,15 @@ app.get('/api/category/:id', async (req, res) => {
     })
   }
 
-  res.json({ success: true, name: cat.label, total: tracks.length, tracks })
+  res.json({
+    success: true,
+    name: cat.label,
+    total: tracks.length,
+    fullTotal: cachedFull.length,
+    excluded: excluded.map((g) => g.id),
+    groups: ARTIST_GROUPS.map((g) => ({ id: g.id, label: g.label, description: g.description })),
+    tracks
+  })
 })
 
 // Serve built client in production (files written to client/dist by `npm run build`)
@@ -128,16 +179,57 @@ function sharesArtist(a, b) {
   return artistTokens(a).some((t) => setB.has(t))
 }
 
-// The 3 wrong options should be other songs by the SAME artist as the answer.
-// If that artist has fewer than 3 other songs in the playlist, fill the rest
-// with random songs so there are always 4 options.
-function pickDistractors(playlist, track) {
-  const others = playlist.filter((t) => t.id !== track.id)
-  const sameArtist = shuffle(others.filter((t) => sharesArtist(t.artist, track.artist))).slice(0, 3)
-  if (sameArtist.length >= 3) return sameArtist
-  const chosen = new Set(sameArtist.map((t) => t.id))
-  const filler = shuffle(others.filter((t) => !chosen.has(t.id))).slice(0, 3 - sameArtist.length)
-  return [...sameArtist, ...filler]
+// ---------------------------------------------------------------- question pool
+// For every song we pre-compute which other songs may appear as wrong options.
+// Having a POOL (rather than the same fixed trio) is what stops the four options
+// from repeating: an artist with exactly 4 songs in a playlist would otherwise
+// always show the identical set of 4.
+function buildDistractorPool(playlist) {
+  const pool = new Map()
+  for (const track of playlist) {
+    const others = playlist.filter((t) => t.id !== track.id)
+    const siblings = shuffle(others.filter((t) => sharesArtist(t.artist, track.artist)))
+    const rest = shuffle(others.filter((t) => !sharesArtist(t.artist, track.artist)))
+    // Prefer up to 8 same-artist songs, then fall back to a few from anywhere.
+    const candidates = [...siblings.slice(0, 8), ...rest.slice(0, 12)]
+    pool.set(track.id, candidates.length >= 3 ? candidates : shuffle(others))
+  }
+  return pool
+}
+
+// Pick 3 wrong options, avoiding anything shown very recently for this song.
+function pickDistractors(pool, track, recent) {
+  const guarded = new Set(recent || [])
+  const candidates = pool.get(track.id) || []
+  const freshOnes = candidates.filter((t) => !guarded.has(t.id))
+  // Fall back to the full candidate list when everything was used recently.
+  const source = freshOnes.length >= 3 ? freshOnes : candidates
+  return shuffle(source).slice(0, 3)
+}
+
+// Order the round so artists rotate: one song per artist per pass, biggest
+// catalogues first. This maximises how many DIFFERENT artists show up.
+function pickRoundOrder(playlist, total) {
+  const byArtist = new Map()
+  const primary = (track) => artistTokens(track.artist)[0] || track.artist || '?'
+  for (const track of shuffle(playlist)) {
+    const key = primary(track)
+    if (!byArtist.has(key)) byArtist.set(key, [])
+    byArtist.get(key).push(track)
+  }
+  const groups = shuffle([...byArtist.values()]).sort((a, b) => b.length - a.length)
+  const order = []
+  for (let pass = 0; order.length < total && pass < 50; pass++) {
+    let added = 0
+    for (const group of groups) {
+      if (order.length >= total) break
+      if (pass >= group.length) continue
+      order.push(group[pass])
+      added++
+    }
+    if (!added) break
+  }
+  return order
 }
 
 function publicPlayers(room) {
@@ -193,12 +285,12 @@ function startRound(room) {
   for (const p of room.players.values()) p.score = 0
   if (!room.roundTotal) room.roundTotal = Math.min(10, room.playlist.length)
 
-  // Prefer songs whose artist has at least 3 other songs in the playlist, so the
-  // 3 wrong options can all be by the same artist as the answer.
-  const pool = shuffle(room.playlist)
-  const hasSiblings = (t) =>
-    room.playlist.filter((o) => o.id !== t.id && sharesArtist(o.artist, t.artist)).length >= 3
-  room.order = [...pool.filter(hasSiblings), ...pool.filter((t) => !hasSiblings(t))].slice(0, room.roundTotal)
+  // Rotate through artists (one song per artist per pass) so the round spreads
+  // across as many different singers as the playlist allows.
+  room.order = pickRoundOrder(room.playlist, room.roundTotal)
+  room.roundTotal = room.order.length
+  room.distractorPool = buildDistractorPool(room.playlist)
+  room.recentDistractors = new Map() // answerId -> [recent distractor ids]
   room.songsPlayed = 0
   room.currentSong = null
   room.answered = new Set()
@@ -217,9 +309,18 @@ function playNext(room) {
   room.currentSong = track
   room.answered = new Set()
 
-  const distractors = pickDistractors(room.playlist, track)
+  const recent = room.recentDistractors.get(track.id) || []
+  const distractors = pickDistractors(room.distractorPool, track, recent)
+  // Remember what was just shown for this song so the next time it comes up the
+  // options are different (keeps the answer hidden but the choices fresh).
+  room.recentDistractors.set(
+    track.id,
+    [...distractors.map((t) => t.id), ...recent].slice(0, DISTRACTOR_RECENT)
+  )
+
   const options = shuffle([track, ...distractors]).map((t) => ({ id: t.id, title: t.title, artist: t.artist }))
 
+  if (process.env.GTS_DEBUG) console.log(`[emit song-start] room=${room.code} #${room.songsPlayed}/${room.roundTotal} track=${track.title}`)
   io.to(room.code).emit('song-start', {
     songNumber: room.songsPlayed,
     total: room.roundTotal,
@@ -235,6 +336,7 @@ function playNext(room) {
 }
 
 function finishSong(room, winnerId) {
+  if (process.env.GTS_DEBUG) console.log(`[finishSong] room=${room.code} songsPlayed=${room.songsPlayed}/${room.roundTotal} winner=${winnerId || 'none'} state=${room.state} hasSong=${!!room.currentSong}`)
   if (room.state !== 'playing' || !room.currentSong) return
   if (room.songTimer) { clearTimeout(room.songTimer); room.songTimer = null }
 
@@ -255,9 +357,11 @@ function finishSong(room, winnerId) {
   })
 
   room.currentSong = null
+  // Guess was correct -> move on quickly. Nobody got it -> let players read it.
+  const pause = winner ? RESULT_PAUSE_CORRECT_MS : RESULT_PAUSE_MS
   room.nextTimer = setTimeout(() => {
     if (room.state === 'playing') playNext(room)
-  }, RESULT_PAUSE_MS)
+  }, pause)
 }
 
 function endRound(room) {
@@ -288,6 +392,8 @@ io.on('connection', (socket) => {
         answered: new Set(),
         songsPlayed: 0,
         roundTotal: 0,
+        distractorPool: new Map(),
+        recentDistractors: new Map(),
         songTimer: null,
         nextTimer: null
       }
@@ -332,6 +438,7 @@ io.on('connection', (socket) => {
 
   socket.on('guess', (payload, cb) => {
     const room = getRoom(socket)
+    if (process.env.GTS_DEBUG) console.log(`[guess] room=${room?.code} song=${room?.currentSong?.title} songsPlayed=${room?.songsPlayed} trackId=${payload?.trackId} answered=${room ? room.answered.size : '-'}/${room ? room.players.size : '-'} state=${room?.state}`)
     if (!room || room.state !== 'playing' || !room.currentSong) return cb?.({ ok: false })
     if (!room.players.has(socket.id)) return cb?.({ ok: false })
     if (room.answered.has(socket.id)) return cb?.({ ok: false, error: 'already-answered' })
@@ -358,6 +465,14 @@ io.on('connection', (socket) => {
 httpServer.listen(PORT, () => {
   console.log(`🎵 Guess The Song server running on http://localhost:${PORT}`)
   console.log(`   Categories: ${CATEGORIES.map((c) => `${c.id} (${c.songs.length})`).join(', ')}`)
+  // Sanity line: how many songs stay playable once each artist group is excluded.
+  for (const g of ARTIST_GROUPS) {
+    const kept = CATEGORIES.map((c) => {
+      const playable = getCachedTracks(filterSongs(c.songs, [g])).length
+      return `${c.id} ${playable}`
+    })
+    console.log(`   Excluding ${g.label}: ${kept.join(', ')}`)
+  }
 })
 
 // Warm the preview cache in the background so categories load fast on first play.

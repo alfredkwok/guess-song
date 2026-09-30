@@ -92,20 +92,23 @@ const ENDY = [
   { title: '今生不回家', artist: '周國賢', year: 2020 },
   { title: '再見有時', artist: '周國賢', year: 2024 },
   { title: '逃生門', artist: '周國賢', year: 2020 },
-  { title: '天秤', artist: '周國賢', year: 2020 },
-  { title: '從此世界多了一分鐘', artist: '周國賢', year: 2022 },
   { title: '好自為之', artist: '周國賢', year: 2021 },
   { title: '我們都不是無辜的', artist: '周國賢', year: 2019 },
-  { title: '覺醒字幕組', artist: '周國賢', year: 2020 },
-  { title: '陽光點的歌', artist: '周國賢', year: 2017 },
-  { title: '溫室氣體', artist: '周國賢', year: 2019 },
-  { title: '永遠很近', artist: '周國賢', year: 2016 },
-  { title: '撲火', artist: '周國賢', year: 2021 },
-  { title: '我是傳奇', artist: '周國賢', year: 2019 },
-  { title: '無畏', artist: '周國賢', year: 2019 },
   { title: '極樂', artist: '周國賢', year: 2021 },
   { title: '天馬行空', artist: '周國賢', year: 2017 },
-  { title: '童話', artist: '周國賢', year: 2019 }
+  // The 10 songs below replaced tracks that iTunes HK has no preview for
+  // (天秤 / 從此世界多了一分鐘 / 覺醒字幕組 / 陽光點的歌 / 溫室氣體 /
+  //  永遠很近 / 撲火 / 我是傳奇 / 無畏 / 童話) so every entry is playable.
+  { title: '守口如瓶', artist: '周國賢', year: 2018 },
+  { title: '錢七', artist: '周國賢', year: 2018 },
+  { title: '在天之靈', artist: '周國賢', year: 2017 },
+  { title: '凡夫的樂章', artist: '周國賢', year: 2019 },
+  { title: '年輕人們', artist: '周國賢', year: 2015 },
+  { title: '當下的力量', artist: '周國賢', year: 2018 },
+  { title: '消化不良', artist: '周國賢', year: 2016 },
+  { title: '雷克雅未克', artist: '麥浚龍、周國賢', year: 2015 },
+  { title: '愛比死更冷', artist: '周國賢', year: 2016 },
+  { title: '天涯', artist: '周國賢', year: 2024 }
 ]
 
 const TERENCE = [
@@ -125,13 +128,11 @@ const TERENCE = [
   { title: '邊一個發明了ENCORE', artist: '林家謙', year: 2022 },
   { title: '夏之風物詩', artist: '林家謙', year: 2022 },
   { title: 'doodoodoo', artist: '林家謙', year: 2022 },
-  { title: '難道我還未夠難', artist: '林家謙', year: 2022 },
   { title: '小林不動產', artist: '林家謙', year: 2023 },
   { title: '怪我只敢做好人', artist: '林家謙', year: 2023 },
   { title: '萬一你是個好人', artist: '林家謙', year: 2023 },
   { title: '流離者的海', artist: '林家謙', year: 2023 },
   { title: '你的世界', artist: '林家謙', year: 2023 },
-  { title: '事與願違', artist: '林家謙', year: 2023 },
   { title: '靈魂出竅練習曲', artist: '林家謙', year: 2023 },
   { title: '無答案', artist: '林家謙', year: 2024 },
   { title: '喃嘸師感官漫遊', artist: '林家謙', year: 2024 },
@@ -144,7 +145,215 @@ const TERENCE = [
   { title: '每當變幻時', artist: '林家謙', year: 2025 }
 ]
 
-export const CATEGORIES = [
+// ---- Optional artist groups (can be filtered out at play time) -------------
+// These are NOT removed from the playlist; players choose whether to include
+// them. Group membership is matched per artist token, so collaborations such as
+// "古巨基、呂爵安" or "姜濤、AGA" are recognised too.
+export const ARTIST_GROUPS = [
+  {
+    id: 'mirror',
+    label: 'MIRROR',
+    description: 'MIRROR 及其全部成員',
+    members: [
+      'MIRROR',
+      '陳瑞輝', '王智德', '楊樂文', '邱士縉', '江𤒹生', '柳應廷',
+      '陳卓賢', '盧瀚霆', '李駿傑', '呂爵安', '姜濤', '邱傲然'
+    ]
+  }
+]
+
+// Split "張天賦、陳蕾" / "A & B" / "X feat. Y" into individual artist names.
+export function artistTokens(artist) {
+  return String(artist || '')
+    .split(/[、,，&/]|feat\.|ft\./i)
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
+// Does this song have any artist belonging to the given group?
+export function songInGroup(song, group) {
+  if (!group) return false
+  return artistTokens(song.artist).some((t) => group.members.includes(t))
+}
+
+// Extra hits added to dilute the year playlists (see ARTIST_GROUPS / MIRROR filter).
+const BACKFILL_2020_2022 = [
+  { title: 'ALL WE HAVE IS NOW', artist: '方皓玟', year: 2020 },
+  { title: '溝渠暢泳', artist: '泳兒', year: 2020 },
+  { title: '十字路口', artist: '胡鴻鈞', year: 2020 },
+  { title: '放心吧! 爸媽不在家', artist: '神奇膠', year: 2020 },
+  { title: '佚名', artist: '梁釗峰', year: 2020 },
+  { title: '痛', artist: '許廷鏗', year: 2020 },
+  { title: '謝謝對不起', artist: '許靖韻', year: 2020 },
+  { title: '小謊言', artist: '連詩雅', year: 2020 },
+  { title: '好好的過 (Have a Nice Life)', artist: '陳葦廷', year: 2020 },
+  { title: '不能放手', artist: '菊梓喬', year: 2020 },
+  { title: '遠在眼前', artist: '馮允謙', year: 2020 },
+  { title: '平凡海賊王', artist: '劉卓軒', year: 2020 },
+  { title: '原來有愛', artist: '譚嘉儀', year: 2020 },
+  { title: '未開始已經結束', artist: 'Dear Jane', year: 2020 },
+  { title: '南洋別戀', artist: 'The Boogie Playboys', year: 2020 },
+  { title: '時間的初衷', artist: 'ToNick', year: 2020 },
+  { title: '深夜告別練習', artist: 'Zpecial', year: 2020 },
+  { title: '想再和你看煙花', artist: '布志綸', year: 2021 },
+  { title: '勿念', artist: '岑寧兒', year: 2021 },
+  { title: '日出時讓街燈安睡', artist: '李幸倪', year: 2021 },
+  { title: '我要和你在一起', artist: '谷婭溦', year: 2021 },
+  { title: '鐵樹', artist: '林欣彤', year: 2021 },
+  { title: '時間的囚犯', artist: '林奕匡', year: 2021 },
+  { title: '愛因斯坦羅森橋', artist: '林家謙', year: 2021 },
+  { title: '只是太愛你', artist: '張敬軒', year: 2021 },
+  { title: '孤勇者', artist: '陳奕迅', year: 2021 },
+  { title: '我想和你好好的', artist: '陳蕾', year: 2021 },
+  { title: '我不是邱比特', artist: '曾比特', year: 2021 },
+  { title: 'It’s OK To Be Sad', artist: '衛蘭', year: 2021 },
+  { title: '萬物有時', artist: '鄭秀文', year: 2021 },
+  { title: '最難行的路', artist: '鄭欣宜', year: 2021 },
+  { title: '未見過世面的招積', artist: '謝安琪', year: 2021 },
+  { title: '好好珍惜自己', artist: '鍾嘉欣', year: 2021 },
+  { title: '那些傷我也有過', artist: '關心妍', year: 2021 },
+  { title: '西遊記', artist: 'JB', year: 2021 },
+  { title: '摯愛 A Letter To...', artist: 'Novel Friday', year: 2021 },
+  { title: '孤獨之塔', artist: 'per se', year: 2021 },
+  { title: '好好地過', artist: 'RubberBand', year: 2021 },
+  { title: '我在流浮山滴眼水.jpg', artist: 'Serrini', year: 2021 },
+  { title: '愛回家', artist: '古巨基', year: 2022 },
+  { title: '土撥鼠之日', artist: '吳林峰', year: 2022 },
+  { title: 'Goodnight My Love', artist: '林德信', year: 2022 },
+  { title: '如風', artist: '炎明熹', year: 2022 },
+  { title: '靈魂伴侶', artist: '姚焯菲', year: 2022 },
+  { title: '及時行樂', artist: '洪嘉豪', year: 2022 },
+  { title: '連續劇', artist: '容祖兒', year: 2022 },
+  { title: 'Frenemy', artist: '張天賦', year: 2022 },
+  { title: '多謝恐懼', artist: '陳明憙', year: 2022 },
+  { title: '命盡頭', artist: '陳柏宇', year: 2022 },
+  { title: '厭惡物圖鑑', artist: '陳健安', year: 2022 },
+  { title: 'Long D', artist: '陳凱詠', year: 2022 },
+  { title: '泰姬', artist: '陳慧敏', year: 2022 },
+  { title: '世界以痛吻我而我歌唱', artist: '黃妍', year: 2022 },
+  { title: '人間英靈', artist: '葉巧琳', year: 2022 },
+  { title: 'Tomorrow', artist: 'AGA', year: 2022 },
+  { title: 'confidence', artist: 'Gareth.T', year: 2022 },
+  { title: '早晨', artist: 'Jan Curious', year: 2022 },
+  { title: '你是我捱過困境的勇氣', artist: 'JNYBeatz', year: 2022 },
+  { title: '後備 2.0', artist: 'Tiab', year: 2022 },
+  { title: '2nd Favourite 第二最愛', artist: 'Tyson Yoshi', year: 2022 },
+  { title: '二話都說', artist: 'WHIZZ', year: 2022 },
+  { title: '精神流亡', artist: 'Zarahn', year: 2022 },
+]
+
+// Extra hits added to dilute the year playlists (see ARTIST_GROUPS / MIRROR filter).
+const BACKFILL_2022_2024 = [
+  { title: 'It\'s not your fault', artist: '方皓玟', year: 2023 },
+  { title: '捱麵包的人', artist: '吳林峰', year: 2023 },
+  { title: '想跟你好好道別我怕來不及', artist: '吳業坤', year: 2023 },
+  { title: '一個人走走', artist: '岑寧兒', year: 2023 },
+  { title: '企好', artist: '李幸倪', year: 2023 },
+  { title: '城市迷霧', artist: '谷婭溦', year: 2023 },
+  { title: '一了百了', artist: '泳兒', year: 2023 },
+  { title: '今生今世', artist: '炎明熹', year: 2023 },
+  { title: '世一 (不可一世)', artist: '張天賦', year: 2023 },
+  { title: '隱形遊樂場 (情緒過山車)', artist: '張敬軒', year: 2023 },
+  { title: '良心發現', artist: '許廷鏗', year: 2023 },
+  { title: '焦焦焦', artist: '陳奕迅', year: 2023 },
+  { title: '好好掛住', artist: '陳健安', year: 2023 },
+  { title: '神的不在場證明', artist: '陳蕾', year: 2023 },
+  { title: '給你幸福 所以幸福', artist: '馮允謙', year: 2023 },
+  { title: '日光漂白', artist: '黃妍', year: 2023 },
+  { title: '綜藝魂', artist: '葉巧琳', year: 2023 },
+  { title: '沒有位置未有人', artist: '劉卓軒', year: 2023 },
+  { title: '愛是… 2.0', artist: '鄭秀文', year: 2023 },
+  { title: 'Believe Us', artist: '鄭欣宜', year: 2023 },
+  { title: '成婚破浪', artist: '謝安琪', year: 2023 },
+  { title: '絕', artist: '譚嘉儀', year: 2023 },
+  { title: 'Special One', artist: 'AGA', year: 2023 },
+  { title: '最佳女團友', artist: 'Beanies', year: 2023 },
+  { title: '懷舊金曲之夜', artist: 'Dear Jane', year: 2023 },
+  { title: '52赫茲', artist: 'KOLOR', year: 2023 },
+  { title: '票房毒藥', artist: 'Nowhere Boys', year: 2023 },
+  { title: '我們的故事未完...待續', artist: 'per se', year: 2023 },
+  { title: 'Be Right Back', artist: 'RubberBand', year: 2023 },
+  { title: '垃圾女星', artist: 'Serrini', year: 2023 },
+  { title: '記得梳頭', artist: 'ToNick', year: 2023 },
+  { title: '你不會一輩子的愛上我', artist: 'Tyson Yoshi', year: 2023 },
+  { title: '下一世つづく', artist: 'YEAHS', year: 2023 },
+  { title: '成長的錯', artist: '古巨基', year: 2024 },
+  { title: '晨星', artist: '周殷廷', year: 2024 },
+  { title: '有你聽我的故事', artist: '林家謙', year: 2024 },
+  { title: '愛在三千的宇宙', artist: '林峯', year: 2024 },
+  { title: '至少他不似你', artist: '姚焯菲', year: 2024 },
+  { title: '漫天星', artist: '洪嘉豪', year: 2024 },
+  { title: 'One Last Time', artist: '容祖兒', year: 2024 },
+  { title: '作賤。矛盾', artist: '許靖韻', year: 2024 },
+  { title: '百妖夜行的修行 FREAKS NIGHT PARADE', artist: '陳凱詠', year: 2024 },
+  { title: '傾城', artist: '曾比特', year: 2024 },
+  { title: '慢性分手', artist: '雲浩影', year: 2024 },
+  { title: '白髮齊眉', artist: '鄧小巧', year: 2024 },
+  { title: 'Let go', artist: '歸綽嶢', year: 2024 },
+  { title: '傢俬', artist: '魏浚笙', year: 2024 },
+  { title: '去北極忘記你', artist: 'Gareth.T', year: 2024 },
+  { title: '傷心的時候別說話', artist: 'Kiri T', year: 2024 },
+  { title: '最佳食用日期', artist: 'KOWLOON K', year: 2024 },
+  { title: '拾回鐵達尼', artist: 'OneUp', year: 2024 },
+  { title: '緊急應變逃生法', artist: 'Pandora', year: 2024 },
+  { title: '98', artist: 'The Hertz', year: 2024 },
+  { title: 'Because of You', artist: 'Tiab', year: 2024 },
+  { title: 'Aren\'t You Thinking of ___?', artist: 'WHIZZ', year: 2024 },
+  { title: '不理痛', artist: 'Zpecial', year: 2024 },
+]
+
+// Extra hits added to dilute the year playlists (see ARTIST_GROUPS / MIRROR filter).
+const BACKFILL_2024_2026 = [
+  { title: '喂起身!', artist: '布志綸', year: 2025 },
+  { title: '瘋子', artist: '吳林峰', year: 2025 },
+  { title: '還剩一件未做的事', artist: '吳業坤', year: 2025 },
+  { title: '隨時隨地', artist: '李幸倪', year: 2025 },
+  { title: '想和你', artist: '周殷廷', year: 2025 },
+  { title: '那些不愛我的人', artist: '林奕匡', year: 2025 },
+  { title: '九月·半晴', artist: '林家謙', year: 2025 },
+  { title: '砂之曼陀羅', artist: '林峯', year: 2025 },
+  { title: '老殘遊戲', artist: '泳兒', year: 2025 },
+  { title: 'KMC', artist: '姚焯菲', year: 2025 },
+  { title: '畜生', artist: '洪嘉豪', year: 2025 },
+  { title: '但你要甜', artist: '容祖兒', year: 2025 },
+  { title: '目擊者', artist: '張天賦', year: 2025 },
+  { title: '我看見今晚的月色很美,你呢?', artist: '晚安莉莉', year: 2025 },
+  { title: 'BELONGING', artist: '陳明憙', year: 2025 },
+  { title: '一天', artist: '陳柏宇', year: 2025 },
+  { title: '不遲不早', artist: '陳健安', year: 2025 },
+  { title: '西湖 Xihu', artist: '陳凱詠', year: 2025 },
+  { title: '不明文規定', artist: '陳蕾', year: 2025 },
+  { title: '我們還有幾多時間', artist: '雲浩影', year: 2025 },
+  { title: '手繪黑卡', artist: '馮允謙', year: 2025 },
+  { title: '其實我 不是那麼的純情', artist: '黃妍', year: 2025 },
+  { title: '小傷疤', artist: '葉巧琳', year: 2025 },
+  { title: 'Seeds of Truth', artist: '詹天文', year: 2025 },
+  { title: '其實痛是你的想像', artist: '鄧小巧', year: 2025 },
+  { title: '城光遂夢', artist: '謝安琪', year: 2025 },
+  { title: '一生懸命', artist: '魏浚笙', year: 2025 },
+  { title: 'The Lost Sunglasses', artist: 'AGA', year: 2025 },
+  { title: '成就解鎖', artist: 'Billy Choi', year: 2025 },
+  { title: '頹廢員工手冊', artist: 'Cozy Syndrome', year: 2025 },
+  { title: '如何變回不知道', artist: 'Dear Jane', year: 2025 },
+  { title: '跟悲傷結了帳', artist: 'Gareth.T', year: 2025 },
+  { title: '我可能是迴避型', artist: 'Kiri T', year: 2025 },
+  { title: '給勝利者的一封信', artist: 'Nowhere Boys', year: 2025 },
+  { title: '善良之歌', artist: 'Pandora', year: 2025 },
+  { title: '差一點你就是永遠', artist: 'per se', year: 2025 },
+  { title: '容許我為你鬆手', artist: 'ROVER', year: 2025 },
+  { title: '搲撈HK', artist: 'RubberBand', year: 2025 },
+  { title: '掌心的女孩', artist: 'Serrini', year: 2025 },
+  { title: 'Re: 末世情書', artist: 'The Hertz', year: 2025 },
+  { title: '⁠1994', artist: 'Tyson Yoshi', year: 2025 },
+  { title: 'Hey Darling Darling, Fill My Empty Soul', artist: 'WHIZZ', year: 2025 },
+  { title: '流星劃過富士山', artist: 'YEAHS', year: 2025 },
+  { title: '其實最怕寫情歌', artist: 'Zpecial', year: 2025 },
+  { title: 'How could you?', artist: '歸綽嶢', year: 2026 },
+]
+
+// Raw three-year buckets: the source of truth for song data. The user-facing
+// year categories are generated per calendar year from these (see below).
+const YEAR_BUCKETS = [
   {
     id: '2020-2022',
     label: '2020–2022',
@@ -250,7 +459,8 @@ export const CATEGORIES = [
       { title: '憶年', artist: '謝安琪', year: 2022 },
       { title: '笑住喊', artist: 'Gareth.T', year: 2022 },
       { title: '我也難過的', artist: '吳林峰、謝芊彤', year: 2022 },
-      { title: "Freakin' Nightmare", artist: '馮允謙', year: 2022 }
+      { title: "Freakin' Nightmare", artist: '馮允謙', year: 2022 },
+      ...BACKFILL_2020_2022
     ]
   },
   {
@@ -358,7 +568,8 @@ export const CATEGORIES = [
       { title: 'Never-never Land', artist: 'COLLAR', year: 2022 },
       { title: '給缺席的人唱首歌', artist: '馮允謙', year: 2022 },
       { title: '沒有翅膀的天使', artist: '姜濤', year: 2023 },
-      { title: 'I Know', artist: '姜濤、AGA', year: 2022 }
+      { title: 'I Know', artist: '姜濤、AGA', year: 2022 },
+      ...BACKFILL_2022_2024
     ]
   },
   {
@@ -466,9 +677,125 @@ export const CATEGORIES = [
       { title: '新牌仔', artist: '李幸倪', year: 2024 },
       { title: 'Diff.', artist: '李幸倪', year: 2024 },
       { title: '神愛世人', artist: '鄧小巧', year: 2024 },
-      { title: '明日明日', artist: 'Dear Jane', year: 2024 }
+      { title: '明日明日', artist: 'Dear Jane', year: 2024 },
+      ...BACKFILL_2024_2026
     ]
-  },
+  }
+]
+
+// 2026 releases, discovered from the iTunes HK catalogue.
+const YEAR_2026 = [
+  { title: '我想過一個怎樣的人生?', artist: '方皓玟', year: 2026 },
+  { title: '急口令', artist: 'CY 陳宗澤', year: 2026 },
+  { title: '水裏水裏去 Water Your Day', artist: '陳凱詠', year: 2026 },
+  { title: 'Is that you?', artist: '歸綽嶢', year: 2026 },
+  { title: '快樂不知時日', artist: 'Dear Jane', year: 2026 },
+  { title: 'Custom-made girl', artist: 'Tiab', year: 2026 },
+  { title: '分擔', artist: 'Billy Choi', year: 2026 },
+  { title: '真的不是故意的', artist: 'Kiri T', year: 2026 },
+  { title: '脫臼', artist: '邱鋒澤', year: 2026 },
+  { title: '外向型憂鬱人格', artist: '鄧小巧', year: 2026 },
+  { title: '穿波鞋的惡魔', artist: '洪嘉豪', year: 2026 },
+  { title: '未會遲', artist: '谷婭溦', year: 2026 },
+  { title: 'Dancing Till The End', artist: 'WHIZZ', year: 2026 },
+  { title: '愛情不是我強項', artist: '吳林峰', year: 2026 },
+  { title: '緊急聯絡人', artist: 'Gareth.T', year: 2026 },
+  { title: '連自己都不夠快樂', artist: '許靖韻', year: 2026 },
+  { title: 'Deadend (活該)', artist: 'Tyson Yoshi', year: 2026 },
+  { title: '當我們不再說晚安', artist: '晚安莉莉', year: 2026 },
+  { title: '不是那種勵志歌', artist: '葉巧琳', year: 2026 },
+  { title: '不藥而癒', artist: '衛蘭', year: 2026 },
+  { title: '你忘掉比我記得的多', artist: 'OneUp', year: 2026 },
+  { title: '派對後派對', artist: '黃妍', year: 2026 },
+  { title: '散光', artist: '泳兒', year: 2026 },
+  { title: '今世情人', artist: '周殷廷', year: 2026 },
+  { title: '樓梯等你', artist: '區子琳', year: 2026 },
+  { title: '想一想日日捱餐死 咪教我洩氣', artist: 'JNYBeatz', year: 2026 },
+  { title: '月亮代表我', artist: 'Moon Tang', year: 2026 },
+  { title: '餘地', artist: 'Serrini', year: 2026 },
+  { title: '特務占士匡 Mad World', artist: '林奕匡', year: 2026 },
+  { title: '大亨', artist: '林家謙', year: 2026 },
+  { title: '舊酒新瓶', artist: '陳柏宇', year: 2026 },
+  { title: 'I\'m alright', artist: '劉卓軒', year: 2026 },
+  { title: '你快樂嗎', artist: '李幸倪', year: 2026 },
+  { title: '初級大人', artist: 'ROVER', year: 2026 },
+  { title: '二樓後續', artist: 'Nowhere Boys', year: 2026 },
+  { title: '⼤數據以為我還愛你', artist: 'Zpecial', year: 2026 },
+  { title: '大團圓結局', artist: 'sica', year: 2026 },
+  { title: '你所打的號碼暫時未能接通', artist: '曾比特', year: 2026 },
+  { title: '仙女座事故', artist: '陳健安', year: 2026 },
+  { title: '烏合之眾', artist: 'KOLOR', year: 2026 },
+  { title: '隕石與地球', artist: '鄭秀文', year: 2026 },
+  { title: '我想和你虛度光陰', artist: '雲浩影', year: 2026 },
+  { title: '陪多我半日好嗎', artist: '麗英', year: 2026 },
+  { title: '人間缺憾美', artist: '馮允謙', year: 2026 },
+  { title: '放棄的界限', artist: '張敬軒', year: 2026 },
+  { title: '等等等等', artist: '容祖兒', year: 2026 },
+  { title: '二缺一的美', artist: '鍾柔美', year: 2026 },
+  { title: 'Bye Bye Bye', artist: '炎明熹', year: 2026 },
+  { title: '淚光', artist: 'COLLAR', year: 2026 },
+  { title: '已出之物', artist: '魏浚笙', year: 2026 },
+  { title: '一杯', artist: 'RubberBand', year: 2026 },
+  { title: '人類愛情學', artist: '陳蕾', year: 2026 },
+  { title: '至少相擁沒錯', artist: '張天賦', year: 2026 },
+  { title: '靈光一千閃', artist: 'Pandora', year: 2026 },
+  { title: '光透進來的地方', artist: '岑寧兒', year: 2026 },
+  { title: '別讓愛被愛人殺死', artist: '姚焯菲', year: 2026 },
+  { title: '大楷人生', artist: 'per se', year: 2026 },
+]
+
+// ---- Per-year categories ---------------------------------------------------
+// A year may have several songs per artist, so prefer entries whose artist has
+// a healthy pool in that year: that keeps the 4 answer options varied.
+function yearPoolScore(song, pool) {
+  const tokens = artistTokens(song.artist)
+  let best = 0
+  for (const t of tokens) {
+    const n = pool.filter((o) => artistTokens(o.artist).includes(t)).length
+    if (n > best) best = n
+  }
+  return best
+}
+
+// Every song that appears anywhere, deduped by title+artist.
+const ALL_SONGS = []
+{
+  const seen = new Set()
+  for (const bucket of [...YEAR_BUCKETS, { songs: YEAR_2026 }]) {
+    for (const song of bucket.songs) {
+      const key = `${song.title}\u0000${song.artist}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      ALL_SONGS.push(song)
+    }
+  }
+}
+
+// One category per calendar year. Songs are ordered most-connected-artist first,
+// and a year is only offered once it has enough material to be playable.
+function buildYearCategories() {
+  const years = [...new Set(ALL_SONGS.map((s) => s.year))].sort((a, b) => a - b)
+  const out = []
+  for (const year of years) {
+    const songs = ALL_SONGS.filter((s) => s.year === year)
+    if (songs.length < 12) continue
+    const ordered = songs
+      .slice()
+      .sort((a, b) => yearPoolScore(b, songs) - yearPoolScore(a, songs))
+    out.push({
+      id: String(year),
+      label: String(year),
+      group: '年份歌單',
+      range: String(year),
+      description: `${year} 年粵語歌`,
+      songs: ordered
+    })
+  }
+  return out
+}
+
+// ---- Artist selections (not year-based) -----------------------------------
+const ARTIST_CATEGORIES = [
   {
     id: 'eason',
     label: '陳奕迅',
@@ -502,3 +829,7 @@ export const CATEGORIES = [
     songs: [...EASON, ...ENDY, ...TERENCE]
   }
 ]
+
+// What the API and UI actually expose: one category per calendar year
+// (2020, 2021, 2022, …) followed by the artist selections.
+export const CATEGORIES = [...buildYearCategories(), ...ARTIST_CATEGORIES]
